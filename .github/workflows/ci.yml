@@ -64,3 +64,42 @@ jobs:
         with:
           name: portaltarefas-${{ github.sha }}   # o artefato leva o commit no nome
           path: saida/
+            # ---------- CD: imagem com a tag do commit, ambiente de teste e smoke test ----------
+  implantar:
+    needs: publicar
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write                        # permite publicar no GitHub Container Registry
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Nome da imagem (registro + repositório + commit)
+        run: echo "IMAGEM=ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}" >> $GITHUB_ENV
+
+      - name: Construir a imagem
+        run: docker build --build-arg VERSAO=$GITHUB_SHA -t $IMAGEM .
+
+      - name: Implantar no ambiente de teste (um contêiner nesta máquina)
+        run: |
+          docker run -d --name teste -p 8080:8080 \
+            -e ConnectionStrings__PortalTarefasDb="Data Source=/app/data/portaltarefas.db" \
+            -e Externo__BaseUrl="http://localhost:8080/" \
+            -e Banco__AplicarMigrations=true \
+            $IMAGEM
+
+      - name: Health Check e smoke test
+        run: |
+          curl --fail --retry 10 --retry-delay 2 --retry-all-errors http://localhost:8080/health/ready
+          curl --fail http://localhost:8080/api/tarefas
+          curl --fail http://localhost:8080/api/diagnostico | grep $GITHUB_SHA
+
+      - name: Usuário e conteúdo da imagem (sem segredos)
+        run: |
+          docker exec teste whoami
+          docker run --rm --entrypoint ls $IMAGEM -a /app
+
+      - name: Publicar a imagem (só se o smoke test passou)
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker push $IMAGEM
