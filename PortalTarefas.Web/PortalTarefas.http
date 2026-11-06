@@ -1,0 +1,105 @@
+# Roteiro 6 — MATRIZ DE AUTORIZAÇÃO (anônimo × usuário comum × administrador)
+# Rode a API com: dotnet run --launch-profile http
+# A senha NÃO fica no arquivo: o REST Client pergunta na hora (@prompt).
+@host = http://localhost:5267
+
+### Login da Ana (Usuario, equipe Alfa) — guarda o token
+# @name ana
+# @prompt senha Senha dos usuários de teste (a mesma do User Secrets)
+POST {{host}}/api/conta/login
+Content-Type: application/json
+
+{ "email": "ana@portal.local", "password": "{{senha}}" }
+
+### Login do Admin (Administrador, equipe Alfa, claim editar-outras-equipes)
+# @name admin
+# @prompt senha Senha dos usuários de teste
+POST {{host}}/api/conta/login
+Content-Type: application/json
+
+{ "email": "admin@portal.local", "password": "{{senha}}" }
+
+@tokenAna = {{ana.response.body.accessToken}}
+@tokenAdmin = {{admin.response.body.accessToken}}
+
+########## LEITURA — GET /api/tarefas  (esperado: 401 · 200 · 200)
+
+### anônimo
+GET {{host}}/api/tarefas
+
+### ana
+GET {{host}}/api/tarefas
+Authorization: Bearer {{tokenAna}}
+
+### admin
+GET {{host}}/api/tarefas
+Authorization: Bearer {{tokenAdmin}}
+
+########## CRIAÇÃO — POST /api/tarefas  (esperado: 401 · 201 · 201)
+
+### anônimo
+POST {{host}}/api/tarefas
+Content-Type: application/json
+
+{ "titulo": "Criada sem login", "descricao": null, "prioridade": "Media", "prazo": "2026-12-01" }
+
+### ana — a tarefa nasce na equipe Alfa
+POST {{host}}/api/tarefas
+Authorization: Bearer {{tokenAna}}
+Content-Type: application/json
+
+{ "titulo": "Criada pela Ana", "descricao": null, "prioridade": "Media", "prazo": "2026-12-01" }
+
+### admin
+POST {{host}}/api/tarefas
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{ "titulo": "Criada pelo admin", "descricao": null, "prioridade": "Media", "prazo": "2026-12-01" }
+
+########## EDIÇÃO de tarefa de OUTRA equipe — PUT /api/tarefas/3 (equipe Beta)
+########## (esperado: 401 · 403 · 204)
+
+### Detalhes da tarefa 3 (como admin) — guarda o rowVersion para os PUTs abaixo
+# @name tarefa3
+GET {{host}}/api/tarefas/3
+Authorization: Bearer {{tokenAdmin}}
+
+@rowVersion3 = {{tarefa3.response.body.$.rowVersion}}
+
+### anônimo
+PUT {{host}}/api/tarefas/3
+Content-Type: application/json
+
+{ "titulo": "Editada", "descricao": null, "situacao": "EmAndamento", "prioridade": "Media", "prazo": "2026-12-01", "rowVersion": "{{rowVersion3}}" }
+
+### ana — equipe Alfa, sem a claim → 403
+PUT {{host}}/api/tarefas/3
+Authorization: Bearer {{tokenAna}}
+Content-Type: application/json
+
+{ "titulo": "Editada pela Ana", "descricao": null, "situacao": "EmAndamento", "prioridade": "Media", "prazo": "2026-12-01", "rowVersion": "{{rowVersion3}}" }
+
+### admin — tem a claim permissao=editar-outras-equipes → 204
+PUT {{host}}/api/tarefas/3
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{ "titulo": "Editada pelo admin", "descricao": null, "situacao": "EmAndamento", "prioridade": "Media", "prazo": "2026-12-01", "rowVersion": "{{rowVersion3}}" }
+
+########## EXCLUSÃO — DELETE /api/tarefas/4  (esperado: 401 · 403 · 204)
+
+### anônimo
+DELETE {{host}}/api/tarefas/4
+
+### ana
+DELETE {{host}}/api/tarefas/4
+Authorization: Bearer {{tokenAna}}
+
+### admin
+DELETE {{host}}/api/tarefas/4
+Authorization: Bearer {{tokenAdmin}}
+
+########## Quem sou eu?
+GET {{host}}/api/conta/eu
+Authorization: Bearer {{tokenAna}}

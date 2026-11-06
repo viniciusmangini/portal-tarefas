@@ -1,0 +1,86 @@
+# Roteiro 7 — testes de observabilidade, saúde, resiliência e capacidade
+# Rode a API com: dotnet run --launch-profile http
+@host = http://localhost:5267
+
+########## ETAPA 1 — LOGS COM CORRELAÇÃO E ESCOPO
+
+### Detalhes da tarefa 2 (guarda a versão atual com o nome "detalhe")
+# @name detalhe
+GET {{host}}/api/tarefas/2
+
+### Atualizar a tarefa 2 (esperado: 204; no log, 3 linhas com o MESMO TraceId e o escopo TarefaId:2)
+PUT {{host}}/api/tarefas/2
+Content-Type: application/json
+
+{
+  "titulo": "Revisar documentação",
+  "descricao": null,
+  "situacao": "EmAndamento",
+  "prioridade": "Baixa",
+  "prazo": "2026-12-15",
+  "rowVersion": "{{detalhe.response.body.$.rowVersion}}"
+}
+
+### Erro proposital (esperado: 500 com Problem Details; copie o traceId e procure no terminal)
+GET {{host}}/api/diagnostico/erro
+
+########## ETAPA 2 — MÉTRICAS E TRACE
+
+### Listar (gera o span "ListarPagina" e a métrica de duração)
+GET {{host}}/api/tarefas?pagina=1&tamanho=5
+
+### Criar (gera a métrica de tarefas criadas)
+POST {{host}}/api/tarefas
+Content-Type: application/json
+
+{
+  "titulo": "Tarefa do Roteiro 7",
+  "descricao": "Gerar métricas",
+  "prioridade": "Media",
+  "prazo": "2026-12-01"
+}
+
+########## ETAPA 3 — HEALTH CHECKS
+
+### Liveness — o processo responde? (esperado: 200 Healthy)
+GET {{host}}/health/live
+
+### Readiness — dá para atender? banco + serviço externo (esperado: 200 Healthy)
+GET {{host}}/health/ready
+
+### Derrubar o serviço externo
+POST {{host}}/simulador/modo/fora
+
+### Liveness de novo (esperado: 200 Healthy — o processo continua de pé)
+GET {{host}}/health/live
+
+### Readiness de novo (esperado: 503 Unhealthy — a dependência caiu)
+GET {{host}}/health/ready
+
+### Religar o serviço externo
+POST {{host}}/simulador/modo/ok
+
+########## ETAPA 4 — RESILIÊNCIA (retry e circuit breaker)
+
+### Falha TRANSITÓRIA: o externo falha 1 vez a cada 3
+POST {{host}}/simulador/modo/instavel
+
+### Chamar (esperado: 200 — a 1ª tentativa falha, o retry acerta; veja "OnRetry" no log)
+GET {{host}}/api/externo
+
+### Falha PERSISTENTE: o externo sempre falha
+POST {{host}}/simulador/modo/fora
+
+### Chamar 3 vezes seguidas (esperado: 503; na 2ª ou 3ª, detail "BrokenCircuitException")
+GET {{host}}/api/externo
+
+### Religar (o circuito volta a fechar após ~15 s)
+POST {{host}}/simulador/modo/ok
+
+########## ETAPA 4 — OUTPUT CACHING
+
+### 1ª chamada: calculada no banco (o log mostra "Painel calculado no banco")
+GET {{host}}/api/painel/ef
+
+### 2ª chamada em menos de 20 s: vem do cache (cabeçalho "Age" e nenhuma linha nova no log)
+GET {{host}}/api/painel/ef

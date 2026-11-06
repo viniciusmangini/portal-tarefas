@@ -1,0 +1,8 @@
+@model Tarefa
+@* Partial: um "pedaço" de página reutilizado na lista e nos detalhes *@
+<div class="resumo">
+    <strong>@Model.Titulo</strong>
+    <span class="prioridade-@Model.Prioridade">@Model.Prioridade</span>
+    <span>Prazo: @Model.Prazo.ToString("dd/MM/yyyy")</span>
+    <span>@Model.Situacao</span>
+</div>

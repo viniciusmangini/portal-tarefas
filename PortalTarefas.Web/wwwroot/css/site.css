@@ -1,0 +1,10 @@
+body { font-family: sans-serif; margin: 0; }
+nav { background: #234; padding: 12px; display: flex; gap: 16px; }
+nav, nav a { color: #fff; }
+main { padding: 16px; max-width: 640px; }
+.resumo { display: flex; gap: 12px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+.prioridade-Alta { color: #b00; font-weight: bold; }
+.mensagem { background: #e6f4e6; padding: 8px; }
+form { display: flex; flex-direction: column; gap: 4px; }
+.field-validation-error, .validation-summary-errors { color: #b00; }
+.input-validation-error { border-color: #b00; }

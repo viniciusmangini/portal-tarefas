@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8" />
+    <title>Portal de Tarefas</title>
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body>
+    <nav>
+        <strong>Portal de Tarefas</strong>
+        <a asp-controller="Tarefas" asp-action="Index">Tarefas</a>
+        <a asp-controller="Tarefas" asp-action="Create">Nova tarefa</a>
+    </nav>
+
+    <main>
+        @if (TempData["Mensagem"] is string mensagem)
+        {
+            <p class="mensagem">@mensagem</p>
+        }
+
+        @RenderBody()   @* aqui entra o conteúdo de cada página *@
+    </main>
+</body>
+</html>

@@ -1,0 +1,31 @@
+@model TarefaInputModel
+@* Uma view só para Criar e Editar: o formulário envia (POST)
+   para o mesmo endereço que o abriu — /Tarefas/Create ou /Tarefas/Edit/1 *@
+
+<h1>@(ViewContext.RouteData.Values["action"]?.ToString() == "Create" ? "Nova tarefa" : "Editar tarefa")</h1>
+
+<form method="post">
+    <div asp-validation-summary="ModelOnly"></div>
+    <input type="hidden" asp-for="RowVersion" />   @* Roteiro 3: versão da tarefa *@
+
+    <label asp-for="Titulo"></label>
+    <input asp-for="Titulo" />
+    <span asp-validation-for="Titulo"></span>
+
+    <label asp-for="Descricao"></label>
+    <textarea asp-for="Descricao"></textarea>
+    <span asp-validation-for="Descricao"></span>
+
+    <label asp-for="Situacao"></label>
+    <select asp-for="Situacao" asp-items="Html.GetEnumSelectList<Situacao>()"></select>
+    
+    <label asp-for="Prioridade"></label>
+    <select asp-for="Prioridade" asp-items="Html.GetEnumSelectList<Prioridade>()"></select>
+
+    <label asp-for="Prazo"></label>
+    <input asp-for="Prazo" />
+    <span asp-validation-for="Prazo"></span>
+
+    <button type="submit">Salvar</button>
+    <a asp-action="Index">Cancelar</a>
+</form>

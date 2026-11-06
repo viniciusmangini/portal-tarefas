@@ -1,0 +1,10 @@
+# Roteiro 8 — o que NÃO entra no contexto do docker build
+**/bin/
+**/obj/
+**/node_modules/
+**/*.db
+.env
+.git/
+PortalTarefas.Frontend/
+PortalTarefas.Cliente/
+PortalTarefas.Testes/

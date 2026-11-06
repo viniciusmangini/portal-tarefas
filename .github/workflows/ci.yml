@@ -1,0 +1,66 @@
+# =====================================================================
+# Roteiro 8 — PIPELINE do Portal de Tarefas (GitHub Actions)
+# Cada "job" roda numa máquina nova do GitHub. "needs" define a ordem:
+#   api ─┐
+#        ├─▶ publicar ─▶ implantar (Etapa 4)
+#   frontend ─┘
+# Se QUALQUER teste falhar, os jobs seguintes nem começam.
+# =====================================================================
+name: CI/CD
+
+# GATILHOS: todo pull request para a main e todo push na main
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  # ---------- Verificação da API: restore, build e testes ----------
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'          # versão do SDK EXPLÍCITA
+      - run: dotnet restore
+      - run: dotnet build --no-restore -c Release -p:OpenApiGenerateDocuments=false
+      - run: dotnet test --no-build -c Release
+
+  # ---------- Verificação do front-end: npm ci, testes e build ----------
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: PortalTarefas.Frontend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: npm ci                         # instala EXATAMENTE o que está no package-lock.json
+      - run: npm test
+      - run: npm run build
+
+  # ---------- Publicação dos artefatos: SÓ depois das duas verificações ----------
+  publicar:
+    needs: [api, frontend]
+    if: github.event_name == 'push'          # em pull request, só verifica; publica só na main
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: dotnet publish PortalTarefas.Web -c Release -o saida/api -p:OpenApiGenerateDocuments=false
+      - run: npm ci && npm run build
+        working-directory: PortalTarefas.Frontend
+      - run: cp -r PortalTarefas.Frontend/dist saida/frontend
+      - uses: actions/upload-artifact@v4
+        with:
+          name: portaltarefas-${{ github.sha }}   # o artefato leva o commit no nome
+          path: saida/
