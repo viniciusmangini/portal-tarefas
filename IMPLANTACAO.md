@@ -24,6 +24,6 @@
 
 ## Registro das versões implantadas
 
-| Data | Ambiente | Versão (commit) | Responsável | Resultado |
-| ---- | -------- | ---------------- | ------------ | --------- |
-|      | teste    |                  |              |           |
+| Data       | Ambiente | Versão (commit) | Responsável | Resultado |
+| ---------- | -------- | ---------------- | ------------ | --------- |
+| 06/11/2026 | teste    | 1.0              |              |           |
