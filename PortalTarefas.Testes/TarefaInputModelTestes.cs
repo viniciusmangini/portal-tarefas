@@ -23,7 +23,7 @@ public class TarefaInputModelTestes
             Titulo = "Estudar Docker", Prioridade = Prioridade.Media, Prazo = DateTime.Today.AddDays(5)
         };
 
-        Assert.NotEmpty(Validar(modelo));   // Assert = "confira que..."; se não for verdade, o teste FALHA
+        Assert.Empty(Validar(modelo));   // Assert = "confira que..."; se não for verdade, o teste FALHA
     }
 
     [Fact]
